@@ -1,0 +1,35 @@
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    session_id VARCHAR(255),
+    form_data TEXT,
+    created_at DATETIME
+);
+
+
+CREATE TABLE forms (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    full_name VARCHAR(255),
+    email VARCHAR(255) UNIQUE,
+    phone VARCHAR(20),
+    country VARCHAR(100),
+    organization VARCHAR(255),
+    job_title VARCHAR(255),
+    industry VARCHAR(255),
+    experience INT,
+    sessions TEXT,
+    attendance_mode ENUM('virtual', 'in-person'),
+    dietary_prefs ENUM('veg', 'non-veg'),
+    ticket_type ENUM('General', 'VIP', 'VVIP'),
+    coupon_code VARCHAR(20),
+    payment_mode VARCHAR(50),
+    payment_id VARCHAR(50),
+    registration_id VARCHAR(50),
+    created_at DATETIME
+);
+
+
+CREATE TABLE coupons (
+    code VARCHAR(20) PRIMARY KEY,
+    discount DECIMAL(5,2),
+    valid_until DATE
+);
