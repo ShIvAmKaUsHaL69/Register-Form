@@ -152,9 +152,90 @@
             border-color: #4CAF50;
             box-shadow: 0 0 5px rgba(76, 175, 80, 0.2);
         }
+
+        /* Add styles for user info and login button */
+        .user-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: none;
+        }
+        .user-info span {
+            color: #333;
+            font-weight: 500;
+        }
+        .login-button {
+            position: absolute;
+            top: 20px;
+            width: 100px;
+            right: 20px;
+            background-color: #4CAF50;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        .login-button:hover {
+            background-color: #45a049;
+        }
+
+        /* Add styles for back button */
+        .back-button {
+            background-color: #6c757d;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.3s;
+            margin-right: 10px;
+        }
+        .back-button:hover {
+            background-color: #5a6268;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        .button-group button {
+            flex: 1;
+        }
+
+        /* Add styles for download button */
+        .download-button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background-color 0.3s;
+            margin-top: 20px;
+            display: none;
+        }
+        .download-button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
+    <!-- Add user info div -->
+    <div class="user-info" id="userInfo">
+        Welcome, <span id="userName"></span>
+    </div>
+
+    <!-- Add login button -->
+    <button class="login-button" id="loginButton">Login</button>
+
     <div class="container">
         <h2>Registration Form</h2>
         
@@ -162,6 +243,7 @@
         <div class="alert alert-danger" id="error-message"></div>
 
         <form id="registrationForm" method="post">
+            <input type="hidden" name="user_id" id="registration_user_id">
             <div class="form-group">
                 <label for="name">Name</label>
                 <input type="text" name="name" id="name" placeholder="Enter your name">
@@ -186,7 +268,7 @@
                 <div class="error" id="country-error"></div>
             </div>
 
-            <button type="submit">Register</button>
+            <button type="submit">Next</button>
         </form>
     </div>
 
@@ -215,7 +297,7 @@
         </div>
     </div>
 
-    <!-- Professional Details Form (Initially Hidden) -->
+    <!-- Professional Details Form -->
     <div id="professionalForm" class="container" style="display: none;">
         <h2>Professional Details</h2>
         
@@ -256,11 +338,14 @@
                 <div class="error" id="experience-error"></div>
             </div>
 
-            <button type="submit">Next</button>
+            <div class="button-group">
+                <button type="button" class="back-button" onclick="showForm('registration')">Back</button>
+                <button type="submit">Next</button>
+            </div>
         </form>
     </div>
 
-    <!-- Event Preferences Form (Initially Hidden) -->
+    <!-- Event Preferences Form -->
     <div id="preferencesForm" class="container" style="display: none;">
         <h2>Event Preferences</h2>
         
@@ -307,11 +392,14 @@
                 <div class="error" id="preferences-error"></div>
             </div>
 
-            <button type="submit">Next</button>
+            <div class="button-group">
+                <button type="button" class="back-button" onclick="showForm('professional')">Back</button>
+                <button type="submit">Next</button>
+            </div>
         </form>
     </div>
 
-    <!-- Payment Form (Initially Hidden) -->
+    <!-- Payment Form -->
     <div id="paymentForm" class="container" style="display: none;">
         <h2>Payment Details</h2>
         
@@ -347,8 +435,15 @@
                 <div class="error" id="payment_mode-error"></div>
             </div>
 
-            <button type="submit">Complete Registration</button>
+            <div class="button-group">
+                <button type="button" class="back-button" onclick="showForm('preferences')">Back</button>
+                <button type="submit">Complete Registration</button>
+            </div>
         </form>
+
+        <button class="download-button" id="downloadPDF" style="display: none;">
+            <i class="fas fa-download"></i> Download Registration Details
+        </button>
     </div>
 
     <script>
@@ -357,7 +452,198 @@
         var span = $('.close');
         var registrationContainer = $('.container').first();
         var professionalForm = $('#professionalForm');
+        var preferencesForm = $('#preferencesForm');
+        var paymentForm = $('#paymentForm');
+        var loginButton = $('#loginButton');
+        var userInfo = $('#userInfo');
         
+        // Function to show form and load data
+        window.showForm = function(formType) {
+            const userId = localStorage.getItem('user_id');
+            
+            // Hide all forms and success messages first
+            $('.container').hide();
+            $('.alert').hide();
+            
+            // Show appropriate form
+            switch(formType) {
+                case 'registration':
+                    registrationContainer.show();
+                    loadRegistrationData(userId);
+                    break;
+                case 'professional':
+                    professionalForm.show();
+                    loadProfessionalData(userId);
+                    break;
+                case 'preferences':
+                    preferencesForm.show();
+                    loadPreferencesData(userId);
+                    break;
+                case 'payment':
+                    paymentForm.show();
+                    loadPaymentData(userId);
+                    break;
+            }
+        };
+
+        // Function to load professional data
+        function loadProfessionalData(userId) {
+            $.ajax({
+                url: '<?php echo base_url("index.php/register/get_professional_data"); ?>',
+                type: 'POST',
+                data: { user_id: userId },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        $('#organization_detail').val(response.data.organization_detail);
+                        $('#job_title').val(response.data.job_title);
+                        $('#industry').val(response.data.industry);
+                        $('#experience').val(response.data.experience);
+                    }
+                }
+            });
+        }
+
+        // Function to load preferences data
+        function loadPreferencesData(userId) {
+            $.ajax({
+                url: '<?php echo base_url("index.php/register/get_preferences_data"); ?>',
+                type: 'POST',
+                data: { user_id: userId },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Set sessions
+                        const sessions = response.data.sessions.split(',');
+                        sessions.forEach(session => {
+                            $(`input[name="sessions[]"][value="${session}"]`).prop('checked', true);
+                        });
+                        
+                        // Set attendance and preferences
+                        $('#attendance').val(response.data.attendence);
+                        $('#preferences').val(response.data.preferences);
+                    }
+                }
+            });
+        }
+
+        // Function to load payment data
+        function loadPaymentData(userId) {
+            $.ajax({
+                url: '<?php echo base_url("index.php/register/get_payment_data"); ?>',
+                type: 'POST',
+                data: { user_id: userId },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        $('#ticket_type').val(response.data.ticket_type);
+                        $('#coupon').val(response.data.coupon);
+                        $('#payment_mode').val(response.data.payment_mode);
+                    }
+                }
+            });
+        }
+
+        // Function to load registration data
+        function loadRegistrationData(userId) {
+            if (!userId) {
+                // For new registration, make email editable
+                $('#email').prop('readonly', false);
+                $('#registration_user_id').val('');
+                return;
+            }
+
+            $.ajax({
+                url: '<?php echo base_url("index.php/register/get_registration_data"); ?>',
+                type: 'POST',
+                data: { user_id: userId },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        $('#registration_user_id').val(userId);
+                        $('#name').val(response.data.name);
+                        $('#email').val(response.data.email);
+                        $('#phone_no').val(response.data.phone_no);
+                        $('#country').val(response.data.country);
+                        // Make email readonly for existing users
+                        $('#email').prop('readonly', true);
+                    }
+                }
+            });
+        }
+
+        // Function to show appropriate form based on progress
+        function showFormByProgress(progress) {
+            // Hide all forms first
+            $('.container').hide();
+            
+            // Show appropriate form based on progress
+            switch(progress) {
+                case 1:
+                    professionalForm.show();
+                    loadProfessionalData(localStorage.getItem('user_id'));
+                    break;
+                case 2:
+                    preferencesForm.show();
+                    loadPreferencesData(localStorage.getItem('user_id'));
+                    break;
+                case 3:
+                    paymentForm.show();
+                    loadPaymentData(localStorage.getItem('user_id'));
+                    break;
+                case 4:
+                    paymentForm.show();
+                    loadPaymentData(localStorage.getItem('user_id'));
+                    $('#payment-success-message').html('Registration completed successfully!').show();
+                    break;
+                default:
+                    registrationContainer.show();
+            }
+        }
+
+        // Check if user is already logged in
+        const userId = localStorage.getItem('user_id');
+        if (userId) {
+            $.ajax({
+                url: '<?php echo base_url("index.php/register/check_progress"); ?>',
+                type: 'POST',
+                data: { user_id: userId },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Show user name and hide login button
+                        $('#userName').text(response.name);
+                        userInfo.show();
+                        loginButton.hide();
+                        
+                        // Show appropriate form
+                        showFormByProgress(parseInt(response.form_progress));
+                    } else {
+                        localStorage.removeItem('user_id');
+                        userInfo.hide();
+                        loginButton.show();
+                        registrationContainer.show();
+                    }
+                },
+                error: function() {
+                    localStorage.removeItem('user_id');
+                    userInfo.hide();
+                    loginButton.show();
+                    registrationContainer.show();
+                }
+            });
+        } else {
+            // Show login button and registration form
+            loginButton.show();
+            userInfo.hide();
+            registrationContainer.show();
+        }
+
+        // Login button click handler
+        loginButton.click(function() {
+            modal.css('display', 'flex');
+        });
+
         span.click(function() {
             modal.hide();
         });
@@ -375,15 +661,33 @@
             $('input').removeClass('field-error');
             $('.alert').hide();
 
+            const userId = $('#registration_user_id').val();
+            const formData = $(this).serialize();
+
             $.ajax({
                 url: '<?php echo base_url("index.php/register/submit"); ?>',
                 type: 'POST',
-                data: $(this).serialize(),
+                data: formData,
                 dataType: 'json',
                 success: function(response) {
                     if(response.status === 'success') {
-                        $('#success-message').html(response.message).show();
-                        modal.css('display', 'flex');
+                        if (!userId) {
+                            // New registration
+                            localStorage.setItem('user_id', response.user_id);
+                            localStorage.setItem('form_progress', '1');
+                            $('#userName').text(response.name);
+                            userInfo.show();
+                            loginButton.hide();
+                        } else {
+                            // Update existing registration
+                            localStorage.setItem('form_progress', response.form_progress);
+                        }
+                        
+                        // Always show professional form next
+                        registrationContainer.hide();
+                        professionalForm.show();
+                        loadProfessionalData(response.user_id || userId);
+                        $('#prof-success-message').html(response.message).show();
                     } else {
                         if(response.errors) {
                             $.each(response.errors, function(field, error) {
@@ -418,14 +722,18 @@
                         // Store user ID in localStorage
                         localStorage.setItem('user_id', response.user_id);
                         
+                        // Show user name and hide login button
+                        $('#userName').text(response.name);
+                        userInfo.show();
+                        loginButton.hide();
+                        
                         // Hide login modal and registration form
                         modal.hide();
-                        registrationContainer.hide();
                         
-                        // Show professional details form
-                        professionalForm.show();
+                        // Show appropriate form based on progress
+                        showFormByProgress(parseInt(response.form_progress));
                         
-                        $('#success-message').html('Login successful! Please complete your professional details.').show();
+                        $('#success-message').html(response.message).show();
                     } else {
                         $('#login-error').html(response.message).show();
                     }
@@ -458,10 +766,10 @@
                 dataType: 'json',
                 success: function(response) {
                     if(response.status === 'success') {
-                        $('#prof-success-message').html(response.message).show();
                         // Hide professional form and show preferences form
                         $('#professionalForm').hide();
                         $('#preferencesForm').show();
+                        $('#pref-success-message').html(response.message).show();
                     } else {
                         if(response.errors) {
                             $.each(response.errors, function(field, error) {
@@ -514,10 +822,10 @@
                 dataType: 'json',
                 success: function(response) {
                     if(response.status === 'success') {
-                        $('#pref-success-message').html(response.message).show();
                         // Hide preferences form and show payment form
                         $('#preferencesForm').hide();
                         $('#paymentForm').show();
+                        $('#payment-success-message').html(response.message).show();
                     } else {
                         if(response.errors) {
                             $.each(response.errors, function(field, error) {
@@ -572,7 +880,8 @@
                 success: function(response) {
                     if(response.status === 'success') {
                         $('#payment-success-message').html(response.message).show();
-                        // Redirect to home page or show completion message
+                        // Show download button without hiding the form
+                        $('#downloadPDF').show();
                     } else {
                         if(response.errors) {
                             $.each(response.errors, function(field, error) {
@@ -590,7 +899,33 @@
                 }
             });
         });
+
+        // Add download PDF button handler
+        $('#downloadPDF').on('click', function() {
+            const userId = localStorage.getItem('user_id');
+            if (!userId) {
+                alert('Session expired. Please login again.');
+                return;
+            }
+
+            // Create a form and submit it to download the PDF
+            const form = $('<form>', {
+                'method': 'POST',
+                'action': '<?php echo base_url("index.php/register/download_pdf"); ?>'
+            });
+
+            $('<input>').attr({
+                'type': 'hidden',
+                'name': 'user_id',
+                'value': userId
+            }).appendTo(form);
+
+            form.appendTo('body').submit().remove();
+        });
     });
     </script>
+
+    <!-- Add Font Awesome for icons -->
+    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
 </body>
 </html> 

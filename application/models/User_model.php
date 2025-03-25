@@ -8,20 +8,36 @@ class User_model extends CI_Model {
         $this->load->database();
     }
     
-    public function insert_user($data) {
-        return $this->db->insert('temp', $data);
-    }
-
     public function check_email_exists($email) {
         $this->db->where('email', $email);
         $query = $this->db->get('basicinfo');
         return $query->num_rows() > 0;
     }
 
+    public function insert_user($data) {
+        // Start transaction
+        $this->db->trans_start();
+        
+        // Insert into basicinfo
+        $this->db->insert('basicinfo', $data);
+        $user_id = $this->db->insert_id();
+        
+        // Insert into other tables with same id
+        $this->db->insert('professionaldetail', ['id' => $user_id]);
+        $this->db->insert('payment', ['id' => $user_id]);
+        $this->db->insert('eventprefrences', ['id' => $user_id]);
+        
+        $this->db->trans_complete();
+        
+        if ($this->db->trans_status()) {
+            return $user_id;
+        }
+        return false;
+    }
+
     public function verify_login($email, $password) {
         $this->db->where('email', $email);
-        $this->db->order_by('id', 'DESC');
-        $query = $this->db->get('temp');
+        $query = $this->db->get('basicinfo');
         
         if ($query->num_rows() > 0) {
             $user = $query->row();
@@ -32,44 +48,10 @@ class User_model extends CI_Model {
         return false;
     }
 
-    public function move_to_basicinfo($email) {
-        // Get user data from temp
-        $this->db->where('email', $email);
-        $query = $this->db->get('temp');
-        
-        if ($query->num_rows() > 0) {
-            $user = $query->row_array();
-            
-            // Remove id field since it's auto increment in basicinfo
-            unset($user['id']);
-            
-            // Add form_progress field
-            $user['form_progress'] = 1;
-            
-            // Insert into basicinfo table and get the new id
-            $this->db->trans_start();
-            $this->db->insert('basicinfo', $user);
-            $new_id = $this->db->insert_id();
-            
-            // Insert into professionaldetail table with same id
-            $this->db->insert('professionaldetail', ['id' => $new_id]);
-            
-            // Insert into payment table with same id
-            $this->db->insert('payment', ['id' => $new_id]);
-            
-            // Insert into eventprefrences table with same id 
-            $this->db->insert('eventprefrences', ['id' => $new_id]);
-            
-            // Delete from temp table
-            $this->db->where('email', $email);
-            $this->db->delete('temp');
-            $this->db->trans_complete();
-            
-            if ($this->db->trans_status()) {
-                return $new_id;
-            }
-        }
-        return false;
+    public function get_user_by_id($user_id) {
+        $this->db->where('id', $user_id);
+        $query = $this->db->get('basicinfo');
+        return $query->row();
     }
 
     public function update_professional_details($user_id, $data) {
@@ -92,5 +74,26 @@ class User_model extends CI_Model {
         return $this->db->update('payment', $data);
     }
 
-    
+    public function update_registration_details($user_id, $data) {
+        $this->db->where('id', $user_id);
+        return $this->db->update('basicinfo', $data);
+    }
+
+    public function get_professional_details($user_id) {
+        $this->db->where('id', $user_id);
+        $query = $this->db->get('professionaldetail');
+        return $query->row();
+    }
+
+    public function get_event_preferences($user_id) {
+        $this->db->where('id', $user_id);
+        $query = $this->db->get('eventprefrences');
+        return $query->row();
+    }
+
+    public function get_payment_details($user_id) {
+        $this->db->where('id', $user_id);
+        $query = $this->db->get('payment');
+        return $query->row();
+    }
 } 
